@@ -146,7 +146,7 @@ def main():
     # Overclient
     if args.command_name == 'monitor':
        overc = None  # Created from the config file
-    elif not args.server_url or args.server_id:
+    elif not args.server_url or not args.server_id:
         raise RuntimeError('--server and --server-id should be specified')
     else:
         args.server_id = args.server_id.split(':', 1)
