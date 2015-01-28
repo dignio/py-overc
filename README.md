@@ -120,7 +120,7 @@ OverC does not connect to anything: all data should be POSTed to it as JSON to `
   "services": [
     { "name": "application", "state": "OK", "info": "up 32h" },
     { "name": "cpu", "state": "OK", "info": "28% load" },
-    { "name": "queue", "state": "OK", "info": "3 items" },
+    { "name": "queue", "state": "OK", "info": "3 items" }
   ]
 }
 ```
@@ -168,7 +168,7 @@ It's possible to send alerts directly by pushing JSON object to `/api/set/alerts
   "alerts": [
     { "message": "System down" },
     { "message": "System down" },
-    { "message": "Cannot check state for service A", "service": "queue" },
+    { "message": "Cannot check state for service A", "service": "queue" }
   ]
 }
 ```
