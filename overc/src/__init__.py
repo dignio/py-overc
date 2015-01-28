@@ -7,6 +7,7 @@ from flask.ctx import _AppCtxGlobals
 from overc import __version__
 from overc.src.init import init_db_engine, init_db_session_for_flask
 from overc.lib.alerts import AlertPlugin
+from overc.lib.email import EmailPlugin
 
 class OvercFlask(Flask):
     """ Custom Flask """
@@ -37,6 +38,7 @@ class OvercApplication(object):
             INSTANCE_PATH='/',
             DATABASE='mysql://user:pass@127.0.0.1/overc',
             ALERT_PLUGINS=[],
+            EMAIL_PLUGIN=None,
         )
 
         # Load config
@@ -55,13 +57,22 @@ class OvercApplication(object):
         # Parse: [alert:*]
         for s in ini.sections():
             if s.startswith('alert:'):
-                app_config['ALERT_PLUGINS'].append(
-                    AlertPlugin(
-                        name=s.split(':', 1)[1],
+                name = s.split(':', 1)[1]
+                if name == 'email': 
+                    app_config['EMAIL_PLUGIN'] = EmailPlugin(
+                        name=name,
                         cwd=app_config['INSTANCE_PATH'],
                         command=ini.get(s, 'command')
                     )
-                )
+                else:
+                    app_config['ALERT_PLUGINS'].append(
+                        AlertPlugin(
+                            #name=s.split(':', 1)[1],
+                            name=name,
+                            cwd=app_config['INSTANCE_PATH'],
+                            command=ini.get(s, 'command')
+                        )
+                    )
 
         # Override from environment
         for name, value in os.environ.items():
