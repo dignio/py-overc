@@ -5,13 +5,24 @@ import os, tempfile
 from overc.src.init import init_db_engine, init_db_session
 from overc.lib.db import models
 from overc.lib import alerts
+from overc.lib.email import EmailPlugin
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
 # TODO: these routines should obtain an exclusive lock so multiple supervise processes does not issue alerts multiple times
 
+def _send_email(app, alert):
+    email_plugin = app.app.config['EMAIL_PLUGIN']
+    email_content = _create_email_content(alert)
+    email_plugin.send(email_content)
 
-def _check_service_states(ssn):
+def _create_email_content(alert):
+    return u'Hi!,\n Server : {server}.\n - Service: {service}.\n - Date: {date}.\
+        \n - State: {event}.\n - Message: {message}'.format(date=datetime.utcnow(), \
+            server=alert.server, service=alert.service, event=alert.event, message=alert.message)
+
+def _check_service_states(ssn, app):
     """ Test all service states, raise alerts if necessary
     :param ssn: Database session
     :type ssn: sqlalchemy.orm.session.Session
@@ -31,15 +42,20 @@ def _check_service_states(ssn):
 
         # Report state changes and abnormal states
         if s.state != (s.prev.state if s.prev else 'OK'):
-            ssn.add(models.Alert(
+            alert = models.Alert(
                 server=s.service.server,
                 service=s.service,
                 service_state=s,
                 channel='service:state',
                 event=s.state,
                 message=u'State changed: "{}" -> "{}"'.format(s.prev.state if s.prev else '(?)', s.state)
-            ))
+            )
+            ssn.add(alert)
+
             new_alerts += 1
+
+            # send mail if service status changed
+            _send_email(app, alert)
 
         # Save
         s.checked = True
@@ -50,7 +66,7 @@ def _check_service_states(ssn):
     return new_alerts
 
 
-def _check_service_timeouts(ssn):
+def _check_service_timeouts(ssn, app):
     """ Test all services for timeouts
     :param ssn: Database session
     :type ssn: sqlalchemy.orm.session.Session
@@ -90,6 +106,10 @@ def _check_service_timeouts(ssn):
             ssn.add(alert)
             ssn.add(s)
             new_alerts += 1
+
+            # send mail if service timeouts
+            if s.timed_out:
+                _send_email(app, alert)
 
     # Finish
     ssn.commit()
@@ -144,8 +164,8 @@ def supervise_once(app, ssn):
     """
     # Act
     new_alerts, sent_alerts = 0, 0
-    new_alerts += _check_service_states(ssn)
-    new_alerts += _check_service_timeouts(ssn)
+    new_alerts += _check_service_states(ssn, app)
+    new_alerts += _check_service_timeouts(ssn, app)
     sent_alerts = _send_pending_alerts(ssn, app.app.config['ALERT_PLUGINS'])
 
     # Finish
