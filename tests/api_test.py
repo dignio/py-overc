@@ -8,7 +8,6 @@ from datetime import datetime
 from . import ApplicationTest
 from overc.lib.db import models
 from overc.lib.alerts import AlertPlugin
-from overc.lib.email import EmailPlugin
 from overc.lib.supervise import supervise_once
 
 
@@ -337,9 +336,7 @@ class ApiTest(ApplicationTest, unittest.TestCase):
         # Should not report again
         self.assertEqual(supervise_once(self.app, self.db), (0, 0))  # no alerts
 
-        # Test email plugin - OK
-        email_plugin = self.app.app.config['EMAIL_PLUGIN']
-        email_plugin.send("Check send email successful")
+
 
         # See how a failing script behaves
         self.app.app.config['ALERT_PLUGINS'].append(
